@@ -1,0 +1,5 @@
+fx_version 'cerulean'
+game 'gta5'
+author 'SinorSystem'
+description 'Apocalypce vehicle pack V1'
+dependency '/assetpacks'
