@@ -322,4 +322,10 @@ RegisterCommand('checkdrop', function(source)
     print(('[World Loot] inventory:dropprops = %s'):format(value))
 end, true)
 
+CreateThread(function()
+    Wait(500)
+    local value = GetConvarInt('inventory:dropprops', 1)
+    print(('[World Loot] Convar inventory:dropprops carregado como %s'):format(value))
+end)
+
 print('[qbx-worldloot] Servidor iniciado com sucesso.')
