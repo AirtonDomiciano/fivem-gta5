@@ -106,9 +106,9 @@ Config.ZombieModels = {
 }
 -- Zombies spawner settings
 Config.SpawnerOptions = {
-    MinSpawnDistance = 100,
-    MaxSpawnDistance = 350,
-    DespawnDistance = 600,
+    MinSpawnDistance = 50,
+    MaxSpawnDistance = 150,
+    DespawnDistance = 300,
     SpawnZombieLimit = 50,-- Maximum zombies per player "keep lew they will keep spawning if dead or deleted"
     ZombieModels = {
         "a_m_m_beach_01",

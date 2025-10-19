@@ -312,4 +312,14 @@ lib.callback.register('qbx-worldloot:server:ensureStaticDrop', function(_, spotI
     }
 end)
 
+RegisterCommand('checkdrop', function(source)
+    if source ~= 0 then
+        print('[World Loot] Comando disponivel apenas no console do servidor.')
+        return
+    end
+
+    local value = GetConvarInt('inventory:dropprops', 1)
+    print(('[World Loot] inventory:dropprops = %s'):format(value))
+end, true)
+
 print('[qbx-worldloot] Servidor iniciado com sucesso.')
