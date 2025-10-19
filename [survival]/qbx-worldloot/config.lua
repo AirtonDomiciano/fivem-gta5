@@ -170,23 +170,23 @@ Config.MedicalLoot = {
 Config.MilitaryLoot = {
     enabled = true,
     spawnChance = 90, -- Muito alto pois são zonas de perigo
-    itemsPerSpot = {min = 3, max = 5},
+    itemsPerSpot = {min = 10, max = 100},
     items = {
         -- Armas premium
-        {item = 'weapon_carbinerifle', chance = 20, amount = {1, 1}},
-        {item = 'weapon_pumpshotgun', chance = 25, amount = {1, 1}},
-        {item = 'weapon_smg', chance = 20, amount = {1, 1}},
-        {item = 'weapon_pistol', chance = 30, amount = {1, 1}},
+        {item = 'weapon_carbinerifle', chance = 100, amount = {1, 1}},
+        {item = 'weapon_pumpshotgun', chance = 100, amount = {1, 1}},
+        {item = 'weapon_smg', chance = 100, amount = {1, 1}},
+        {item = 'weapon_pistol', chance = 100, amount = {1, 1}},
         
         -- Munição abundante
-        {item = 'rifle_ammo', chance = 40, amount = {30, 60}},
-        {item = 'shotgun_ammo', chance = 35, amount = {15, 30}},
-        {item = 'smg_ammo', chance = 35, amount = {30, 60}},
-        {item = 'pistol_ammo', chance = 40, amount = {20, 50}},
+        {item = 'rifle_ammo', chance = 100, amount = {30, 60}},
+        {item = 'shotgun_ammo', chance = 100, amount = {15, 30}},
+        {item = 'smg_ammo', chance = 100, amount = {30, 60}},
+        {item = 'pistol_ammo', chance = 100, amount = {20, 50}},
         
         -- Equipamento tático
-        {item = 'armor', chance = 45, amount = {1, 2}},
-        {item = 'radio', chance = 30, amount = {1, 1}},
+        {item = 'armor', chance = 100, amount = {1, 2}},
+        {item = 'radio', chance = 100, amount = {1, 1}},
         {item = 'binoculars', chance = 25, amount = {1, 1}},
         
         -- Médico militar
