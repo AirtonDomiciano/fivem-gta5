@@ -7,6 +7,7 @@ Config.InteractKey = 38 -- Tecla E
 Config.SearchTime = 5000 -- Tempo para procurar (8 segundos)
 Config.LootDistance = 2.0 -- Distância para interagir
 Config.RespawnTime = 3600000 -- 1 hora (em ms) para loot reaparecer
+Config.InstantDrop = true -- Se true, o drop aparece automaticamente sem necessidade de buscar
 
 -- Configurações do drop físico (ox_inventory)
 Config.DropSettings = {
