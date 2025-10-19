@@ -62,6 +62,39 @@ local function DetermineLootType(entity, entityType)
     return 'house'
 end
 
+
+local function SpawnDropForSpot(spot)
+    local lootType = DetermineLootType(spot.entity, spot.type)
+    local dropResult = lib.callback.await('qbx-worldloot:server:createDrop', false, lootType, spot.coords)
+
+    if dropResult and dropResult.success then
+        MarkLocationLooted(spot.coords)
+
+        lib.notify({
+            description = Config.Lang.drop_created,
+            type = 'success'
+        })
+
+        return true
+    else
+        local reason = dropResult and dropResult.reason
+        local message = Config.Lang.drop_failed
+
+        if reason == 'chance' or reason == 'empty' or reason == nil then
+            message = Config.Lang.nothing_found
+        elseif reason == 'disabled' then
+            message = Config.Lang.loot_disabled or Config.Lang.drop_failed
+        end
+
+        lib.notify({
+            description = message,
+            type = 'error'
+        })
+
+        return false
+    end
+end
+
 -- Thread para detectar loot pr├│ximo
 CreateThread(function()
     while true do
@@ -124,19 +157,19 @@ CreateThread(function()
     end
 end)
 
--- Thread para desenhar markers e intera├º├úo
+-- Thread para desenhar markers e interação
 CreateThread(function()
     while true do
         local sleep = 1000
-        
+
         if Config.Enabled and #nearbyLootSpots > 0 then
             sleep = 0
             local playerCoords = GetEntityCoords(PlayerPedId())
-            
+
             for _, spot in ipairs(nearbyLootSpots) do
                 local coords = spot.coords
                 local dist = #(playerCoords - coords)
-                
+
                 -- Desenha marker
                 if Config.Marker.enabled and dist < Config.Marker.distance then
                     DrawMarker(
@@ -155,28 +188,37 @@ CreateThread(function()
                         false
                     )
                 end
-                
-                -- Intera├º├úo
-                if dist < Config.LootDistance and not isSearching then
-                    lib.showTextUI(Config.Lang.press_search)
-                    
-                    if IsControlJustPressed(0, Config.InteractKey) then
-                        lib.hideTextUI()
-                        SearchLocation(spot)
+
+                if Config.InstantDrop then
+                    if dist < Config.LootDistance and not isSearching and not IsLocationLooted(spot.coords) then
+                        isSearching = true
+                        SpawnDropForSpot(spot)
+                        isSearching = false
                     end
-                elseif dist < Config.LootDistance + 0.5 then
-                    lib.hideTextUI()
+                else
+                    -- Interação manual
+                    if dist < Config.LootDistance and not isSearching then
+                        lib.showTextUI(Config.Lang.press_search)
+
+                        if IsControlJustPressed(0, Config.InteractKey) then
+                            lib.hideTextUI()
+                            SearchLocation(spot)
+                        end
+                    elseif dist < Config.LootDistance + 0.5 then
+                        lib.hideTextUI()
+                    end
                 end
             end
         else
-            lib.hideTextUI()
+            if not Config.InstantDrop then
+                lib.hideTextUI()
+            end
         end
-        
+
         Wait(sleep)
     end
 end)
 
--- Fun├º├úo para procurar em um local
 function SearchLocation(spot)
     if isSearching then return end
     isSearching = true
@@ -222,31 +264,7 @@ function SearchLocation(spot)
         return
     end
 
-    local lootType = DetermineLootType(spot.entity, spot.type)
-    local dropResult = lib.callback.await('qbx-worldloot:server:createDrop', false, lootType, spot.coords)
-
-    if dropResult and dropResult.success then
-        MarkLocationLooted(spot.coords)
-
-        lib.notify({
-            description = Config.Lang.drop_created,
-            type = 'success'
-        })
-    else
-        local reason = dropResult and dropResult.reason
-        local message = Config.Lang.drop_failed
-
-        if reason == 'chance' or reason == 'empty' or reason == nil then
-            message = Config.Lang.nothing_found
-        elseif reason == 'disabled' then
-            message = Config.Lang.loot_disabled or Config.Lang.drop_failed
-        end
-
-        lib.notify({
-            description = message,
-            type = 'error'
-        })
-    end
+    SpawnDropForSpot(spot)
 
     isSearching = false
 end

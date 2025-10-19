@@ -321,3 +321,116 @@ Config.SpecialZones = {
         markerColor = {r = 50, g = 50, b = 255}
     },
 }
+
+-- ====================================
+-- STATIC HIGH VALUE LOOT
+-- ====================================
+
+Config.StaticLootSpots = {
+    {
+        id = 'mrpd_armory',
+        name = 'Armeria MRPD',
+        coords = vector3(451.92, -992.62, 30.69),
+        lootType = 'police',
+        respawn = 1800000, -- 30 minutes
+        instant = true,
+        itemsPerSpot = {min = 3, max = 5},
+        items = {
+            {item = 'weapon_carbinerifle', chance = 35, amount = {1, 1}},
+            {item = 'weapon_pumpshotgun', chance = 30, amount = {1, 1}},
+            {item = 'weapon_pistol', chance = 60, amount = {1, 1}},
+            {item = 'pistol_ammo', chance = 90, amount = {20, 40}},
+            {item = 'shotgun_ammo', chance = 70, amount = {6, 12}},
+            {item = 'armour', chance = 80, amount = {1, 1}},
+            {item = 'clothing', chance = 65, amount = {1, 2}},
+            {item = 'radio', chance = 50, amount = {1, 1}}
+        },
+        dropSettings = {
+            prefix = 'Arsenal Policial',
+            model = joaat('prop_gun_case_01')
+        },
+        markerColor = {r = 50, g = 50, b = 255, a = 200},
+        props = {
+            {model = 'w_ar_carbinerifle', offset = vector3(0.0, 0.0, -0.05), heading = 90.0},
+            {model = 'prop_cs_heist_bag_02', offset = vector3(0.22, -0.08, -0.05), heading = 20.0}
+        }
+    },
+    {
+        id = 'mrpd_locker',
+        name = 'Vestiario MRPD',
+        coords = vector3(461.28, -994.28, 30.69),
+        lootType = 'police',
+        respawn = 1800000,
+        instant = true,
+        itemsPerSpot = {min = 2, max = 4},
+        items = {
+            {item = 'clothing', chance = 80, amount = {1, 2}},
+            {item = 'armour', chance = 60, amount = {1, 1}},
+            {item = 'weapon_pistol', chance = 35, amount = {1, 1}},
+            {item = 'pistol_ammo', chance = 85, amount = {20, 40}},
+            {item = 'radio', chance = 55, amount = {1, 1}}
+        },
+        dropSettings = {
+            prefix = 'Equipamento Policial',
+            model = joaat('prop_cs_heist_bag_02')
+        },
+        markerColor = {r = 50, g = 50, b = 255, a = 200},
+        props = {
+            {model = 'prop_cs_heist_bag_02', offset = vector3(0.0, 0.0, -0.05), heading = 0.0},
+            {model = 'prop_armour_pickup', offset = vector3(-0.15, 0.18, -0.05), heading = 0.0}
+        }
+    },
+    {
+        id = 'sandy_pd_storage',
+        name = 'Delegacia Sandy',
+        coords = vector3(1851.29, 3686.42, 34.27),
+        lootType = 'police',
+        respawn = 1800000,
+        instant = true,
+        itemsPerSpot = {min = 3, max = 4},
+        items = {
+            {item = 'weapon_pumpshotgun', chance = 40, amount = {1, 1}},
+            {item = 'weapon_smg', chance = 30, amount = {1, 1}},
+            {item = 'pistol_ammo', chance = 90, amount = {20, 40}},
+            {item = 'smg_ammo', chance = 75, amount = {30, 60}},
+            {item = 'armour', chance = 65, amount = {1, 1}},
+            {item = 'clothing', chance = 55, amount = {1, 2}}
+        },
+        dropSettings = {
+            prefix = 'Suprimentos Sandy PD',
+            model = joaat('prop_box_wood02a')
+        },
+        markerColor = {r = 50, g = 50, b = 255, a = 200},
+        props = {
+            {model = 'w_sb_microsmg', offset = vector3(0.0, 0.0, -0.05), heading = 180.0},
+            {model = 'prop_armour_pickup', offset = vector3(0.18, 0.12, -0.05), heading = 0.0}
+        }
+    },
+    {
+        id = 'paleto_pd_storage',
+        name = 'Delegacia Paleto',
+        coords = vector3(-448.54, 6006.51, 31.72),
+        lootType = 'police',
+        respawn = 1800000,
+        instant = true,
+        itemsPerSpot = {min = 3, max = 5},
+        items = {
+            {item = 'weapon_carbinerifle', chance = 30, amount = {1, 1}},
+            {item = 'weapon_smg', chance = 35, amount = {1, 1}},
+            {item = 'pistol_ammo', chance = 85, amount = {20, 40}},
+            {item = 'rifle_ammo', chance = 70, amount = {30, 60}},
+            {item = 'armour', chance = 75, amount = {1, 1}},
+            {item = 'clothing', chance = 60, amount = {1, 2}},
+            {item = 'radio', chance = 50, amount = {1, 1}}
+        },
+        dropSettings = {
+            prefix = 'Suprimentos Paleto PD',
+            model = joaat('prop_gun_case_01')
+        },
+        markerColor = {r = 50, g = 50, b = 255, a = 200},
+        props = {
+            {model = 'w_ar_carbinerifle', offset = vector3(0.0, 0.0, -0.05), heading = 270.0},
+            {model = 'prop_cs_heist_bag_02', offset = vector3(0.2, 0.18, -0.05), heading = 200.0}
+        }
+    }
+}

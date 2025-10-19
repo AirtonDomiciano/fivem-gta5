@@ -1,124 +1,249 @@
--- Sistema para spawnar loot em zonas específicas (casas, lojas, etc)
+-- Static loot zones to surface visible high-value drops inside key interiors.
 
 local activeZoneLoot = {}
+local staticLootSpots = {}
 
--- Locais fixos de loot em interiores/zonas populares
-local LootSpots = {
-    -- HOSPITAL PILLBOX
-    {coords = vector3(307.71, -595.14, 43.28), type = 'medical', label = 'Consultório'},
-    {coords = vector3(311.41, -584.31, 43.28), type = 'medical', label = 'Sala de Cirurgia'},
-    {coords = vector3(324.45, -582.48, 43.28), type = 'medical', label = 'Emergência'},
-    {coords = vector3(301.62, -581.45, 43.28), type = 'medical', label = 'Farmácia'},
-    
-    -- DELEGACIA MISSION ROW
-    {coords = vector3(451.92, -992.62, 30.69), type = 'police', label = 'Armeria PD'},
-    {coords = vector3(461.28, -994.28, 30.69), type = 'police', label = 'Vestiário PD'},
-    {coords = vector3(441.39, -996.66, 30.69), type = 'police', label = 'Escritório PD'},
-    
-    -- LOJAS DE CONVENIÊNCIA (24/7)
-    {coords = vector3(24.47, -1347.37, 29.50), type = 'store', label = '24/7 Centro'},
-    {coords = vector3(-3038.71, 585.95, 7.91), type = 'store', label = '24/7 Praia'},
-    {coords = vector3(-3241.10, 1001.23, 12.83), type = 'store', label = '24/7 Highway'},
-    {coords = vector3(1728.78, 6414.41, 35.04), type = 'store', label = '24/7 Paleto'},
-    {coords = vector3(1697.23, 4924.15, 42.06), type = 'store', label = '24/7 Grapeseed'},
-    {coords = vector3(1961.17, 3740.01, 32.34), type = 'store', label = '24/7 Sandy'},
-    {coords = vector3(547.79, 2671.31, 42.16), type = 'store', label = '24/7 Harmony'},
-    {coords = vector3(2557.94, 382.05, 108.62), type = 'store', label = '24/7 Palomino'},
-    {coords = vector3(373.55, 325.56, 103.57), type = 'store', label = '24/7 Vinewood'},
-    
-    -- POSTOS DE GASOLINA
-    {coords = vector3(49.42, -1750.53, 29.62), type = 'store', label = 'Posto Grove'},
-    {coords = vector3(1163.71, -323.92, 69.21), type = 'store', label = 'Posto Mirror Park'},
-    {coords = vector3(-1820.82, 792.52, 138.12), type = 'store', label = 'Posto Richman'},
-    {coords = vector3(1702.84, 4933.59, 42.08), type = 'store', label = 'Posto Grapeseed'},
-    
-    -- CASAS EXEMPLO (adicione mais conforme seu mapa)
-    {coords = vector3(-14.35, -1441.27, 31.10), type = 'house', label = 'Casa 1'},
-    {coords = vector3(5.14, -1884.09, 23.70), type = 'house', label = 'Casa 2'},
-    {coords = vector3(57.58, -1927.01, 21.91), type = 'house', label = 'Casa 3'},
-    {coords = vector3(-679.67, -1013.29, 12.98), type = 'house', label = 'Casa 4'},
-    
-    -- MOTEL
-    {coords = vector3(327.56, -229.54, 54.22), type = 'house', label = 'Motel Quarto 1'},
-    {coords = vector3(311.25, -225.42, 54.22), type = 'house', label = 'Motel Quarto 2'},
-    
-    -- SANDY SHORES
-    {coords = vector3(1961.95, 3742.88, 32.34), type = 'store', label = 'Loja Sandy'},
-    {coords = vector3(1851.29, 3686.42, 34.27), type = 'police', label = 'Delegacia Sandy'},
-    
-    -- PALETO BAY
-    {coords = vector3(-448.54, 6006.51, 31.72), type = 'police', label = 'Delegacia Paleto'},
-    {coords = vector3(-378.13, 6045.86, 31.50), type = 'medical', label = 'Clínica Paleto'},
-}
+do
+    local configured = Config.StaticLootSpots or {}
 
--- Thread para spawnar loot fixo nas zonas
-CreateThread(function()
-    Wait(5000) -- Espera o jogo carregar
-    
-    while true do
-        Wait(1000)
-        
-        if Config.Enabled then
-            local playerCoords = GetEntityCoords(PlayerPedId())
-            
-            for i, spot in ipairs(LootSpots) do
-                local dist = #(playerCoords - spot.coords)
-                
-                -- Só processa se estiver próximo
-                if dist < 50.0 then
-                    -- Verifica se já tem loot ativo neste spot
-                    if not activeZoneLoot[i] then
-                        -- Cria "zona" de loot invisível
-                        activeZoneLoot[i] = {
-                            coords = spot.coords,
-                            type = spot.type,
-                            label = spot.label,
-                            active = true
-                        }
-                    end
-                elseif activeZoneLoot[i] then
-                    -- Remove se o player se afastou muito
-                    if dist > 100.0 then
-                        activeZoneLoot[i] = nil
-                    end
-                end
+    for index = 1, #configured do
+        local spot = configured[index]
+        local id = spot.id or ('static_' .. index)
+
+        spot.id = id
+        spot.lootType = spot.lootType or spot.type or 'house'
+        spot.activateRange = spot.activateRange or 80.0
+        spot.deactivateRange = spot.deactivateRange or (spot.activateRange + 40.0)
+        spot.spawnDistance = spot.spawnDistance or 15.0
+        spot.despawnDistance = spot.despawnDistance or (spot.spawnDistance + 10.0)
+        spot.markerDistance = spot.markerDistance or Config.Marker.distance or 10.0
+
+        staticLootSpots[index] = spot
+    end
+end
+
+local function ensureModelLoaded(hash)
+    if HasModelLoaded(hash) then return end
+
+    RequestModel(hash)
+
+    while not HasModelLoaded(hash) do
+        Wait(0)
+    end
+end
+
+local function spawnPropsForSpot(index, spot)
+    local zoneData = activeZoneLoot[index]
+
+    if not zoneData or zoneData.propsSpawned or not spot.props then
+        return
+    end
+
+    zoneData.spawnedProps = {}
+
+    for _, prop in ipairs(spot.props) do
+        local model = prop.model
+
+        if model then
+            local hash = type(model) == 'number' and model or joaat(model)
+            ensureModelLoaded(hash)
+
+            local offset = prop.offset or vector3(0.0, 0.0, 0.0)
+            local coords = vector3(
+                spot.coords.x + offset.x,
+                spot.coords.y + offset.y,
+                spot.coords.z + offset.z
+            )
+
+            local entity = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+
+            if prop.heading then
+                SetEntityHeading(entity, prop.heading)
+            end
+
+            if prop.rotation then
+                SetEntityRotation(
+                    entity,
+                    prop.rotation.x or 0.0,
+                    prop.rotation.y or 0.0,
+                    prop.rotation.z or 0.0,
+                    2,
+                    true
+                )
+            end
+
+            FreezeEntityPosition(entity, true)
+            SetEntityCollision(entity, false, false)
+            SetEntityAsMissionEntity(entity, true, false)
+
+            zoneData.spawnedProps[#zoneData.spawnedProps + 1] = { entity = entity, model = hash }
+        end
+    end
+
+    zoneData.propsSpawned = true
+end
+
+local function removePropsForSpot(index)
+    local zoneData = activeZoneLoot[index]
+
+    if not zoneData or not zoneData.spawnedProps then
+        return
+    end
+
+    for _, prop in ipairs(zoneData.spawnedProps) do
+        if prop.entity and DoesEntityExist(prop.entity) then
+            DeleteEntity(prop.entity)
+        end
+
+        if prop.model then
+            SetModelAsNoLongerNeeded(prop.model)
+        end
+    end
+
+    zoneData.spawnedProps = nil
+    zoneData.propsSpawned = false
+end
+
+local function requestStaticDrop(index, spot)
+    local zoneData = activeZoneLoot[index]
+
+    if not zoneData or zoneData.pending then
+        return
+    end
+
+    zoneData.pending = true
+
+    CreateThread(function()
+        local result = lib.callback.await('qbx-worldloot:server:ensureStaticDrop', false, spot.id)
+
+        zoneData.pending = false
+
+        if not activeZoneLoot[index] then
+            return
+        end
+
+        if result and result.success then
+            zoneData.dropActive = true
+            spawnPropsForSpot(index, spot)
+
+            local respawn = spot.respawn or Config.RespawnTime
+            zoneData.nextAvailable = GetGameTimer() + respawn
+        else
+            if result and result.reason == 'cooldown' and result.remaining then
+                zoneData.nextAvailable = GetGameTimer() + result.remaining
+            else
+                zoneData.nextAvailable = GetGameTimer() + 10000
+            end
+
+            zoneData.dropActive = result and result.success or false
+
+            if not zoneData.dropActive then
+                removePropsForSpot(index)
             end
         end
+    end)
+end
+
+CreateThread(function()
+    Wait(5000)
+
+    while true do
+        Wait(1000)
+
+        if not Config.Enabled then
+            goto continue
+        end
+
+        local playerCoords = GetEntityCoords(PlayerPedId())
+
+        for index, spot in ipairs(staticLootSpots) do
+            local zoneData = activeZoneLoot[index]
+            local dist = #(playerCoords - spot.coords)
+
+            if dist < spot.activateRange then
+                if not zoneData then
+                    activeZoneLoot[index] = {
+                        id = spot.id,
+                        coords = spot.coords,
+                        label = spot.name or spot.label,
+                        lootType = spot.lootType,
+                        active = true,
+                        nextAvailable = 0
+                    }
+                else
+                    zoneData.active = true
+                end
+            elseif zoneData and dist > spot.deactivateRange then
+                removePropsForSpot(index)
+                activeZoneLoot[index] = nil
+            end
+        end
+
+        ::continue::
     end
 end)
 
--- Thread para desenhar markers nas zonas fixas
 CreateThread(function()
     while true do
         local sleep = 1000
-        
-        if Config.Enabled and Config.Marker.enabled then
+
+        if Config.Enabled then
             local playerCoords = GetEntityCoords(PlayerPedId())
-            
-            for _, spot in pairs(activeZoneLoot) do
-                if spot and spot.active then
+
+            for index, spot in ipairs(staticLootSpots) do
+                local zoneData = activeZoneLoot[index]
+
+                if zoneData and zoneData.active then
                     local dist = #(playerCoords - spot.coords)
-                    
-                    if dist < Config.Marker.distance then
-                        sleep = 0
-                        
-                        -- Cor baseada no tipo
-                        local color = Config.Marker.color
-                        if spot.type == 'medical' then
-                            color = {r = 255, g = 50, b = 50, a = 200}
-                        elseif spot.type == 'police' then
-                            color = {r = 50, g = 50, b = 255, a = 200}
-                        elseif spot.type == 'military' then
-                            color = {r = 255, g = 0, b = 0, a = 200}
+
+                    if zoneData.dropActive and zoneData.nextAvailable and GetGameTimer() >= zoneData.nextAvailable then
+                        zoneData.dropActive = false
+                        removePropsForSpot(index)
+                        zoneData.nextAvailable = GetGameTimer()
+                    end
+
+                    local shouldSpawn = spot.instant
+
+                    if shouldSpawn == nil then
+                        shouldSpawn = Config.InstantDrop
+                    end
+
+                    if shouldSpawn and dist < spot.spawnDistance then
+                        if not zoneData.dropActive then
+                            if not zoneData.nextAvailable or GetGameTimer() >= zoneData.nextAvailable then
+                                requestStaticDrop(index, spot)
+                                sleep = 0
+                            end
+                        elseif spot.props and not zoneData.propsSpawned then
+                            spawnPropsForSpot(index, spot)
                         end
-                        
+                    elseif zoneData.propsSpawned and dist > spot.despawnDistance then
+                        removePropsForSpot(index)
+                    end
+
+                    if Config.Marker.enabled and dist < spot.markerDistance then
+                        sleep = 0
+
+                        local color = spot.markerColor or Config.Marker.color
+
                         DrawMarker(
                             Config.Marker.type,
-                            spot.coords.x, spot.coords.y, spot.coords.z + 0.3,
-                            0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0,
-                            Config.Marker.size.x, Config.Marker.size.y, Config.Marker.size.z,
-                            color.r, color.g, color.b, color.a,
+                            spot.coords.x,
+                            spot.coords.y,
+                            spot.coords.z + 0.3,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            Config.Marker.size.x,
+                            Config.Marker.size.y,
+                            Config.Marker.size.z,
+                            color.r,
+                            color.g,
+                            color.b,
+                            color.a or Config.Marker.color.a,
                             Config.Marker.bobUpAndDown,
                             false,
                             2,
@@ -131,16 +256,15 @@ CreateThread(function()
                 end
             end
         end
-        
+
         Wait(sleep)
     end
 end)
 
--- Exporta zonas para uso em outros scripts
 exports('GetActiveZoneLoot', function()
     return activeZoneLoot
 end)
 
 exports('GetLootSpots', function()
-    return LootSpots
+    return staticLootSpots
 end)
