@@ -398,14 +398,14 @@ function CreateLootMenuOptions(lootData, pedId)
         }
         
         -- Adiciona imagem se disponível, senão remove ícone padrão se emoji estiver no título
-        if itemImage then
-            optionData.icon = itemImage
-        elseif itemIcon ~= Config.UI.icons.default then
-            optionData.icon = nil -- Remove ícone padrão quando emoji está no título
-        else
-            optionData.icon = 'box-open'
-            optionData.iconColor = 'lightblue'
-        end
+        -- if itemImage then
+        --     optionData.icon = itemImage
+        -- elseif itemIcon ~= Config.UI.icons.default then
+        --     optionData.icon = nil -- Remove ícone padrão quando emoji está no título
+        -- else
+        --     optionData.icon = 'box-open'
+        --     optionData.iconColor = 'lightblue'
+        -- end
         
         table.insert(options, optionData)
     end

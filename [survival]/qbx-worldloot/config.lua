@@ -8,6 +8,14 @@ Config.SearchTime = 5000 -- Tempo para procurar (8 segundos)
 Config.LootDistance = 2.0 -- Distância para interagir
 Config.RespawnTime = 3600000 -- 1 hora (em ms) para loot reaparecer
 
+-- Configurações do drop físico (ox_inventory)
+Config.DropSettings = {
+    prefix = 'World Loot',
+    slots = nil, -- usa o padrão do ox_inventory quando nil
+    maxWeight = nil, -- usa o padrão do ox_inventory quando nil
+    model = joaat('prop_box_wood02a')
+}
+
 -- Comando para admin resetar loot
 Config.ResetCommand = 'resetloot' -- /resetloot
 
@@ -30,7 +38,10 @@ Config.Lang = {
     nothing_found = 'Nada útil aqui...',
     already_looted = 'Já foi saqueado',
     inventory_full = 'Inventário cheio',
-    too_far = 'Muito longe'
+    too_far = 'Muito longe',
+    drop_created = 'Você encontrou suprimentos! Verifique o chão.',
+    drop_failed = 'Não foi possível gerar o drop.',
+    loot_disabled = 'Este tipo de loot está desativado.'
 }
 
 -- ====================================
@@ -261,7 +272,7 @@ Config.SpecialZones = {
         coords = vector3(298.57, -584.42, 43.26),
         radius = 80.0,
         lootType = 'medical',
-        markerColor = {r = 255, g = 50, g = 50}
+        markerColor = {r = 255, g = 50, b = 50}
     },
     
     -- Base Militar Fort Zancudo
@@ -272,7 +283,16 @@ Config.SpecialZones = {
         lootType = 'military',
         markerColor = {r = 255, g = 0, b = 0}
     },
-    
+
+    -- Base militar adicional (Humane Labs)
+    {
+        name = "Humane Labs Military Stash",
+        coords = vector3(3519.97, 3705.55, 36.64),
+        radius = 120.0,
+        lootType = 'military',
+        markerColor = {r = 50, g = 200, b = 120}
+    },
+
     -- Delegacia Mission Row
     {
         name = "Mission Row PD",

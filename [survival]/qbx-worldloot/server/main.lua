@@ -19,157 +19,122 @@ local function GetLootConfig(lootType)
     end
 end
 
--- Callback para gerar loot
-lib.callback.register('qbx-worldloot:server:generateLoot', function(source, lootType, coords)
+local function GenerateLoot(lootType, coords)
+    coords = coords and vector3(coords.x, coords.y, coords.z) or vector3(0.0, 0.0, 0.0)
+
     local lootConfig = GetLootConfig(lootType)
-    
-    if not lootConfig or not lootConfig.enabled then
-        return {}
+
+    if not lootConfig then
+        return nil, 'invalid'
     end
-    
-    -- Verifica chance de spawn
+
+    if not lootConfig.enabled then
+        return nil, 'disabled'
+    end
+
     local spawnRoll = math.random(100)
     if spawnRoll > lootConfig.spawnChance then
         if Config.Debug then
             print(string.format('[World Loot] Spawn falhou: %s%% (roll: %s%%)', lootConfig.spawnChance, spawnRoll))
         end
-        return {}
+        return {}, 'chance'
     end
-    
-    -- Gera quantidade de itens
+
     local itemCount = math.random(lootConfig.itemsPerSpot.min, lootConfig.itemsPerSpot.max)
     local generatedLoot = {}
-    
-    for i = 1, itemCount do
-        -- Calcula chance total
+    local items = exports.ox_inventory:Items()
+
+    for _ = 1, itemCount do
         local totalChance = 0
+
         for _, lootItem in ipairs(lootConfig.items) do
             totalChance = totalChance + lootItem.chance
         end
-        
-        -- Rola item
+
         local roll = math.random() * totalChance
         local currentChance = 0
-        
+
         for _, lootItem in ipairs(lootConfig.items) do
             currentChance = currentChance + lootItem.chance
+
             if roll <= currentChance then
                 local amount = math.random(lootItem.amount[1], lootItem.amount[2])
-                
-                -- Verifica se o item existe no inventário
-                local items = exports.ox_inventory:Items()
+
                 if items[lootItem.item] then
-                    table.insert(generatedLoot, {
+                    generatedLoot[#generatedLoot + 1] = {
                         name = lootItem.item,
                         label = items[lootItem.item].label or lootItem.item,
                         amount = amount,
                         available = true
-                    })
-                else
-                    if Config.Debug then
-                        print(string.format('^3[World Loot] Item %s não existe no ox_inventory^0', lootItem.item))
-                    end
+                    }
+                elseif Config.Debug then
+                    print(string.format('^3[World Loot] Item %s não existe no ox_inventory^0', lootItem.item))
                 end
-                
+
                 break
             end
         end
     end
-    
+
     if Config.Debug and #generatedLoot > 0 then
         print(string.format('[World Loot] Gerado %s itens tipo %s em %.1f, %.1f, %.1f', #generatedLoot, lootType, coords.x, coords.y, coords.z))
     end
-    
-    return generatedLoot
+
+    if #generatedLoot == 0 then
+        return {}, 'empty'
+    end
+
+    return generatedLoot, nil
+end
+
+lib.callback.register('qbx-worldloot:server:generateLoot', function(source, lootType, coords)
+    local loot = GenerateLoot(lootType, coords)
+    return loot or {}
 end)
 
--- Callback para pegar item com verificação
-lib.callback.register('qbx-worldloot:server:takeItemWithCheck', function(source, itemName, amount)
-    local src = source
-    
-    local canCarry = exports.ox_inventory:CanCarryItem(src, itemName, amount)
-    
-    if not canCarry then
-        lib.notify(src, {
-            description = Config.Lang.inventory_full,
-            type = 'error'
-        })
-        return false
+lib.callback.register('qbx-worldloot:server:createDrop', function(source, lootType, coords)
+    coords = coords and vector3(coords.x, coords.y, coords.z) or vector3(0.0, 0.0, 0.0)
+
+    local loot, reason = GenerateLoot(lootType, coords)
+
+    if not loot or #loot == 0 then
+        return {
+            success = false,
+            reason = reason or 'empty'
+        }
     end
-    
-    local success = exports.ox_inventory:AddItem(src, itemName, amount)
-    
-    if success then
-        lib.notify(src, {
-            description = string.format('Você encontrou %sx %s', amount, itemName),
-            type = 'success'
-        })
-        
-        -- Log
+
+    local dropItems = {}
+
+    for i = 1, #loot do
+        local item = loot[i]
+        dropItems[i] = { item.name, item.amount, item.metadata or {} }
+    end
+
+    local settings = Config.DropSettings or {}
+    local prefix = settings.prefix or 'World Loot'
+    local slots = settings.slots
+    local maxWeight = settings.maxWeight
+    local model = settings.model
+
+    local dropId = exports.ox_inventory:CustomDrop(prefix, dropItems, coords, slots, maxWeight, nil, model)
+
+    if not dropId then
         if Config.Debug then
-            local player = exports.qbx_core:GetPlayer(src)
-            if player then
-                local playerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-                print(string.format('[World Loot] %s pegou %sx %s', playerName, amount, itemName))
-            end
+            print('[World Loot] Falha ao criar drop via ox_inventory')
         end
-        
-        return true
-    else
-        lib.notify(src, {
-            description = 'Erro ao adicionar item',
-            type = 'error'
-        })
-        return false
-    end
-end)
 
--- Evento para pegar todos os itens
-RegisterNetEvent('qbx-worldloot:server:takeAll', function(lootData)
-    local src = source
-    local itemsReceived = 0
-    local itemsFailed = 0
-    
-    for _, item in ipairs(lootData) do
-        local canCarry = exports.ox_inventory:CanCarryItem(src, item.name, item.amount)
-        
-        if canCarry then
-            local success = exports.ox_inventory:AddItem(src, item.name, item.amount)
-            
-            if success then
-                itemsReceived = itemsReceived + 1
-            else
-                itemsFailed = itemsFailed + 1
-            end
-        else
-            itemsFailed = itemsFailed + 1
-        end
-        
-        Wait(50)
+        return {
+            success = false,
+            reason = 'failed_drop'
+        }
     end
-    
-    if itemsReceived > 0 then
-        lib.notify(src, {
-            description = string.format('Você coletou %s itens', itemsReceived),
-            type = 'success'
-        })
-    end
-    
-    if itemsFailed > 0 then
-        lib.notify(src, {
-            description = string.format('%s itens não couberam', itemsFailed),
-            type = 'warning'
-        })
-    end
-    
-    -- Log
-    if Config.Debug then
-        local player = exports.qbx_core:GetPlayer(src)
-        if player then
-            local playerName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
-            print(string.format('[World Loot] %s pegou %s itens (falhou: %s)', playerName, itemsReceived, itemsFailed))
-        end
-    end
+
+    return {
+        success = true,
+        dropId = dropId,
+        coords = coords
+    }
 end)
 
 print('^2═══════════════════════════════════════^0')

@@ -1,4 +1,4 @@
-local lootedSpots = {}
+﻿local lootedSpots = {}
 local nearbyLootSpots = {}
 local isSearching = false
 
@@ -13,7 +13,7 @@ local function MarkLocationLooted(coords)
     local key = string.format("%.1f_%.1f_%.1f", coords.x, coords.y, coords.z)
     lootedSpots[key] = true
     
-    -- Remove após o tempo de respawn
+    -- Remove ap├│s o tempo de respawn
     SetTimeout(Config.RespawnTime, function()
         lootedSpots[key] = nil
     end)
@@ -34,18 +34,18 @@ end
 local function DetermineLootType(entity, entityType)
     local coords = GetEntityCoords(entity)
     
-    -- Verifica se está em zona especial primeiro
+    -- Verifica se est├í em zona especial primeiro
     local zoneType = GetZoneType(coords)
     if zoneType then
         return zoneType
     end
     
-    -- Se for veículo, verifica o modelo
+    -- Se for ve├¡culo, verifica o modelo
     if entityType == 'vehicle' then
         local model = GetEntityModel(entity)
         local className = GetVehicleClass(entity)
         
-        -- Veículos policiais
+        -- Ve├¡culos policiais
         if className == 18 then -- Emergency vehicles
             return 'police'
         end
@@ -58,11 +58,11 @@ local function DetermineLootType(entity, entityType)
         return 'prop'
     end
     
-    -- Padrão para casas/edificios
+    -- Padr├úo para casas/edificios
     return 'house'
 end
 
--- Thread para detectar loot próximo
+-- Thread para detectar loot pr├│ximo
 CreateThread(function()
     while true do
         local sleep = 1000
@@ -72,7 +72,7 @@ CreateThread(function()
             local playerCoords = GetEntityCoords(playerPed)
             nearbyLootSpots = {}
             
-            -- Procura por props lootáveis
+            -- Procura por props loot├íveis
             if Config.PropLoot.enabled then
                 for _, propModel in ipairs(Config.LootableProps) do
                     local propHash = GetHashKey(propModel)
@@ -95,7 +95,7 @@ CreateThread(function()
                 end
             end
             
-            -- Procura por veículos
+            -- Procura por ve├¡culos
             if Config.VehicleLoot.enabled then
                 local vehicles = GetGamePool('CVehicle')
                 for _, vehicle in ipairs(vehicles) do
@@ -104,7 +104,7 @@ CreateThread(function()
                         local dist = #(playerCoords - vehCoords)
                         
                         if dist < Config.Marker.distance and not IsLocationLooted(vehCoords) then
-                            -- Verifica se está abandonado (sem motorista)
+                            -- Verifica se est├í abandonado (sem motorista)
                             if IsVehicleSeatFree(vehicle, -1) then
                                 table.insert(nearbyLootSpots, {
                                     entity = vehicle,
@@ -124,7 +124,7 @@ CreateThread(function()
     end
 end)
 
--- Thread para desenhar markers e interação
+-- Thread para desenhar markers e intera├º├úo
 CreateThread(function()
     while true do
         local sleep = 1000
@@ -156,7 +156,7 @@ CreateThread(function()
                     )
                 end
                 
-                -- Interação
+                -- Intera├º├úo
                 if dist < Config.LootDistance and not isSearching then
                     lib.showTextUI(Config.Lang.press_search)
                     
@@ -176,12 +176,11 @@ CreateThread(function()
     end
 end)
 
--- Função para procurar em um local
+-- Fun├º├úo para procurar em um local
 function SearchLocation(spot)
     if isSearching then return end
     isSearching = true
-    
-    -- Verifica se já foi saqueado
+
     if IsLocationLooted(spot.coords) then
         lib.notify({
             description = Config.Lang.already_looted,
@@ -190,8 +189,7 @@ function SearchLocation(spot)
         isSearching = false
         return
     end
-    
-    -- Animação de busca
+
     local success = lib.progressBar({
         duration = Config.SearchTime,
         label = Config.Lang.searching,
@@ -208,13 +206,12 @@ function SearchLocation(spot)
             flag = 1
         }
     })
-    
+
     if not success then
         isSearching = false
         return
     end
-    
-    -- Verifica se ainda está próximo
+
     local playerCoords = GetEntityCoords(PlayerPedId())
     if #(playerCoords - spot.coords) > Config.LootDistance + 1.0 then
         lib.notify({
@@ -224,111 +221,36 @@ function SearchLocation(spot)
         isSearching = false
         return
     end
-    
-    -- Determina tipo de loot
+
     local lootType = DetermineLootType(spot.entity, spot.type)
-    
-    -- Pede loot ao servidor
-    local lootData = lib.callback.await('qbx-worldloot:server:generateLoot', false, lootType, spot.coords)
-    
-    if lootData and #lootData > 0 then
-        -- Marca como saqueado
+    local dropResult = lib.callback.await('qbx-worldloot:server:createDrop', false, lootType, spot.coords)
+
+    if dropResult and dropResult.success then
         MarkLocationLooted(spot.coords)
-        
-        -- Mostra menu de loot
-        ShowLootMenu(lootData, spot.coords)
-    else
+
         lib.notify({
-            description = Config.Lang.nothing_found,
+            description = Config.Lang.drop_created,
+            type = 'success'
+        })
+    else
+        local reason = dropResult and dropResult.reason
+        local message = Config.Lang.drop_failed
+
+        if reason == 'chance' or reason == 'empty' or reason == nil then
+            message = Config.Lang.nothing_found
+        elseif reason == 'disabled' then
+            message = Config.Lang.loot_disabled or Config.Lang.drop_failed
+        end
+
+        lib.notify({
+            description = message,
             type = 'error'
         })
     end
-    
+
     isSearching = false
 end
 
--- Menu de loot (similar ao do zombieloot)
-function ShowLootMenu(lootData, location)
-    CreateLootMenuOptions(lootData, location)
-end
-
-local isProcessingLoot = false
-
-function CreateLootMenuOptions(lootData, location)
-    local options = {}
-    local availableItems = {}
-    
-    for _, item in ipairs(lootData) do
-        if item.available then
-            table.insert(availableItems, item)
-        end
-    end
-    
-    if #availableItems == 0 then
-        lib.notify({description = 'Todos os itens foram coletados', type = 'success'})
-        isProcessingLoot = false
-        return
-    end
-    
-    -- Pegar Tudo
-    table.insert(options, {
-        title = 'Pegar Tudo',
-        icon = 'hand-holding',
-        iconColor = 'green',
-        onSelect = function()
-            if isProcessingLoot then return end
-            isProcessingLoot = true
-            
-            TriggerServerEvent('qbx-worldloot:server:takeAll', availableItems)
-            
-            for _, item in ipairs(lootData) do
-                item.available = false
-            end
-            
-            Wait(500)
-            isProcessingLoot = false
-        end
-    })
-    
-    table.insert(options, {
-        title = '─────────────',
-        disabled = true
-    })
-    
-    -- Items individuais
-    for _, item in ipairs(availableItems) do
-        table.insert(options, {
-            title = item.label,
-            description = string.format('Quantidade: %s', item.amount),
-            icon = 'box',
-            onSelect = function()
-                if isProcessingLoot then return end
-                isProcessingLoot = true
-                
-                local success = lib.callback.await('qbx-worldloot:server:takeItemWithCheck', false, item.name, item.amount)
-                
-                if success then
-                    item.available = false
-                end
-                
-                Wait(200)
-                isProcessingLoot = false
-                CreateLootMenuOptions(lootData, location)
-            end
-        })
-    end
-    
-    lib.registerContext({
-        id = 'worldloot_menu',
-        title = Config.Lang.found_items,
-        options = options,
-        onExit = function()
-            isProcessingLoot = false
-        end
-    })
-    
-    lib.showContext('worldloot_menu')
-end
 
 -- Comando admin para resetar loot
 RegisterCommand(Config.ResetCommand, function()
