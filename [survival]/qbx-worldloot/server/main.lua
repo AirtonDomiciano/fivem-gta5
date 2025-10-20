@@ -130,7 +130,8 @@ local function GenerateLoot(lootType, coords, options)
     end
 
     if Config.Debug and #generatedLoot > 0 then
-        print(('[World Loot] Gerado %s itens tipo %s em %.1f, %.1f, %.1f'):format(#generatedLoot, lootType, coords.x, coords.y, coords.z))
+        print(('[World Loot] Gerado %s itens tipo %s em %.1f, %.1f, %.1f'):format(#generatedLoot, lootType, coords.x,
+            coords.y, coords.z))
     end
 
     if #generatedLoot == 0 then
@@ -201,7 +202,8 @@ lib.callback.register('qbx-worldloot:server:createDrop', function(_, lootType, c
 
     local settings = buildDropSettings(options)
 
-    local dropId = exports.ox_inventory:CustomDrop(settings.prefix, dropItems, coords, settings.slots, settings.maxWeight, nil, settings.model)
+    local dropId = exports.ox_inventory:CustomDrop(settings.prefix, dropItems, coords, settings.slots, settings
+        .maxWeight, nil, settings.model)
 
     if not dropId then
         if Config.Debug then
@@ -291,7 +293,8 @@ lib.callback.register('qbx-worldloot:server:ensureStaticDrop', function(_, spotI
 
     local settings = buildDropSettings(spot)
 
-    local dropId = exports.ox_inventory:CustomDrop(settings.prefix, dropItems, spot.coords, settings.slots, settings.maxWeight, nil, settings.model)
+    local dropId = exports.ox_inventory:CustomDrop(settings.prefix, dropItems, spot.coords, settings.slots,
+        settings.maxWeight, nil, settings.model)
 
     if not dropId then
         state.nextAvailable = now + 5000
@@ -312,20 +315,27 @@ lib.callback.register('qbx-worldloot:server:ensureStaticDrop', function(_, spotI
     }
 end)
 
+-- Sistema de logging melhorado
+local function LogInfo(message)
+    print('^2[QBX-ZombieLoot] ' .. message .. '^0')
+end
+
+
 RegisterCommand('checkdrop', function(source)
+    Wait(1000)
     if source ~= 0 then
         print('[World Loot] Comando disponivel apenas no console do servidor.')
         return
     end
 
     local value = GetConvarInt('inventory:dropprops', 1)
-    print(('[World Loot] inventory:dropprops = %s'):format(value))
+    LogInfo('[World Loot] inventory:dropprops = %s'):format(value)
 end, true)
 
 CreateThread(function()
-    Wait(500)
+    Wait(1000)
     local value = GetConvarInt('inventory:dropprops', 1)
-    print(('[World Loot] Convar inventory:dropprops carregado como %s'):format(value))
+    LogInfo(('[World Loot] Convar inventory:dropprops carregado como %s'):format(value))
 end)
 
-print('[qbx-worldloot] Servidor iniciado com sucesso.')
+print('[qbx-worldloot] Servidor iniciado com sucesso xtetinha.')
