@@ -14,7 +14,6 @@ Config.DropSettings = {
     prefix = 'World Loot',
     slots = nil, -- usa o padrão do ox_inventory quando nil
     maxWeight = nil, -- usa o padrão do ox_inventory quando nil
-    model = joaat('prop_box_wood02a')
 }
 
 -- Comando para admin resetar loot
@@ -170,23 +169,23 @@ Config.MedicalLoot = {
 Config.MilitaryLoot = {
     enabled = true,
     spawnChance = 90, -- Muito alto pois são zonas de perigo
-    itemsPerSpot = {min = 10, max = 100},
+    itemsPerSpot = {min = 3, max = 5},
     items = {
         -- Armas premium
-        {item = 'weapon_carbinerifle', chance = 100, amount = {1, 1}},
-        {item = 'weapon_pumpshotgun', chance = 100, amount = {1, 1}},
-        {item = 'weapon_smg', chance = 100, amount = {1, 1}},
-        {item = 'weapon_pistol', chance = 100, amount = {1, 1}},
+        {item = 'weapon_carbinerifle', chance = 20, amount = {1, 1}},
+        {item = 'weapon_pumpshotgun', chance = 25, amount = {1, 1}},
+        {item = 'weapon_smg', chance = 20, amount = {1, 1}},
+        {item = 'weapon_pistol', chance = 30, amount = {1, 1}},
         
         -- Munição abundante
-        {item = 'rifle_ammo', chance = 100, amount = {30, 60}},
-        {item = 'shotgun_ammo', chance = 100, amount = {15, 30}},
-        {item = 'smg_ammo', chance = 100, amount = {30, 60}},
-        {item = 'pistol_ammo', chance = 100, amount = {20, 50}},
+        {item = 'rifle_ammo', chance = 40, amount = {30, 60}},
+        {item = 'shotgun_ammo', chance = 35, amount = {15, 30}},
+        {item = 'smg_ammo', chance = 35, amount = {30, 60}},
+        {item = 'pistol_ammo', chance = 40, amount = {20, 50}},
         
         -- Equipamento tático
-        {item = 'armor', chance = 100, amount = {1, 2}},
-        {item = 'radio', chance = 100, amount = {1, 1}},
+        {item = 'armor', chance = 45, amount = {1, 2}},
+        {item = 'radio', chance = 30, amount = {1, 1}},
         {item = 'binoculars', chance = 25, amount = {1, 1}},
         
         -- Médico militar
@@ -346,8 +345,7 @@ Config.StaticLootSpots = {
             {item = 'radio', chance = 50, amount = {1, 1}}
         },
         dropSettings = {
-            prefix = 'Arsenal Policial',
-            model = joaat('prop_gun_case_01')
+            prefix = 'Arsenal Policial'
         },
         markerColor = {r = 50, g = 50, b = 255, a = 200},
         props = {
@@ -371,8 +369,7 @@ Config.StaticLootSpots = {
             {item = 'radio', chance = 55, amount = {1, 1}}
         },
         dropSettings = {
-            prefix = 'Equipamento Policial',
-            model = joaat('prop_cs_heist_bag_02')
+            prefix = 'Equipamento Policial'
         },
         markerColor = {r = 50, g = 50, b = 255, a = 200},
         props = {
@@ -397,8 +394,7 @@ Config.StaticLootSpots = {
             {item = 'clothing', chance = 55, amount = {1, 2}}
         },
         dropSettings = {
-            prefix = 'Suprimentos Sandy PD',
-            model = joaat('prop_box_wood02a')
+            prefix = 'Suprimentos Sandy PD'
         },
         markerColor = {r = 50, g = 50, b = 255, a = 200},
         props = {
@@ -424,8 +420,7 @@ Config.StaticLootSpots = {
             {item = 'radio', chance = 50, amount = {1, 1}}
         },
         dropSettings = {
-            prefix = 'Suprimentos Paleto PD',
-            model = joaat('prop_gun_case_01')
+            prefix = 'Suprimentos Paleto PD'
         },
         markerColor = {r = 50, g = 50, b = 255, a = 200},
         props = {
