@@ -221,7 +221,7 @@ end)
 -- Inicialização do sistema
 CreateThread(function()
     Wait(1000) -- Aguarda outros resources carregarem
-    LogInfo('Sistema carregado com sucesso!')
+    LogInfo('Sistema carregado com sucesso! xtetinha')
     LogInfo('Versão: 1.0.0')
     LogInfo('Dependências: qbx_core, ox_lib, ox_inventory')
     
