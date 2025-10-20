@@ -358,6 +358,11 @@ local function spawnDynamicZoneDrops(zoneId, positions)
     local storedPositions = {}
     local settings = buildDropSettings(dynamic)
 
+    print(('[World Loot] Iniciando geração de drops dinâmicos para %s (%d posições)'):format(
+        zoneId,
+        type(positions) == 'table' and #positions or 0
+    ))
+
     for index = 1, #positions do
         local coords = positions[index]
         local adjustedCoords = vector3(coords.x, coords.y, coords.z + (dynamic.groundOffset or 0.0))
