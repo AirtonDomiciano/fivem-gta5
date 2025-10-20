@@ -38,6 +38,80 @@ do
     end
 end
 
+local dynamicZones = {}
+local dynamicZoneState = {}
+
+do
+    local configuredZones = Config.SpecialZones or {}
+
+    for index = 1, #configuredZones do
+        local zone = configuredZones[index]
+        local id = zone.id or ('zone_' .. index)
+
+        zone.id = id
+
+        if zone.coords then
+            zone.coords = vector3(zone.coords.x, zone.coords.y, zone.coords.z)
+        else
+            zone.coords = vector3(0.0, 0.0, 0.0)
+        end
+
+        zone.radius = zone.radius or 50.0
+
+        local dynamic = zone.dynamicDrops
+
+        if dynamic and dynamic.enabled ~= false then
+            dynamic.minDrops = math.max(1, math.floor(dynamic.minDrops or dynamic.min or 1))
+            dynamic.maxDrops = math.max(dynamic.minDrops,
+                math.floor(dynamic.maxDrops or dynamic.max or dynamic.minDrops))
+            dynamic.randomRadius = dynamic.randomRadius or zone.radius
+            dynamic.randomAttempts = dynamic.randomAttempts or 6
+            dynamic.groundOffset = dynamic.groundOffset or 0.0
+            dynamic.spawnChance = dynamic.spawnChance or 100
+
+            if dynamic.spawnPoints then
+                for pointIndex = 1, #dynamic.spawnPoints do
+                    local point = dynamic.spawnPoints[pointIndex]
+
+                    if point.coords then
+                        point.coords = vector3(point.coords.x, point.coords.y, point.coords.z)
+                    else
+                        dynamic.spawnPoints[pointIndex] = vector3(point.x, point.y, point.z)
+                    end
+                end
+            end
+
+            dynamicZones[id] = zone
+            dynamicZoneState[id] = {
+                dropIds = {},
+                positions = {},
+                nextAvailable = 0,
+                lastSignature = nil
+            }
+        end
+    end
+end
+
+local function shuffleTable(list)
+    for index = #list, 2, -1 do
+        local swapIndex = math.random(index)
+        list[index], list[swapIndex] = list[swapIndex], list[index]
+    end
+end
+
+local function signaturePositions(list)
+    local keys = {}
+
+    for index = 1, #list do
+        local coords = list[index]
+        keys[#keys + 1] = string.format('%.2f_%.2f_%.2f', coords.x, coords.y, coords.z)
+    end
+
+    table.sort(keys)
+
+    return table.concat(keys, '|')
+end
+
 local function GenerateLoot(lootType, coords, options)
     options = options or {}
 
@@ -232,6 +306,106 @@ local function dropExists(dropId)
     return inventory and inventory.type == 'drop'
 end
 
+local function cleanupZoneDrops(zoneId)
+    local state = dynamicZoneState[zoneId]
+
+    if not state or not state.dropIds or #state.dropIds == 0 then
+        return
+    end
+
+    local active = {}
+
+    for index = 1, #state.dropIds do
+        local dropId = state.dropIds[index]
+
+        if dropExists(dropId) then
+            active[#active + 1] = dropId
+        end
+    end
+
+    if #active ~= #state.dropIds then
+        state.dropIds = active
+
+        if #active == 0 then
+            state.positions = {}
+        end
+    end
+end
+
+local function spawnDynamicZoneDrops(zoneId, positions)
+    local zone = dynamicZones[zoneId]
+
+    if not zone then
+        return nil, 'invalid_zone'
+    end
+
+    local dynamic = zone.dynamicDrops
+    local state = dynamicZoneState[zoneId]
+
+    cleanupZoneDrops(zoneId)
+
+    local now = GetGameTimer()
+
+    if state.dropIds and #state.dropIds > 0 then
+        return state
+    end
+
+    if state.nextAvailable and now < state.nextAvailable then
+        return nil, 'cooldown', state.nextAvailable - now
+    end
+
+    local dropIds = {}
+    local storedPositions = {}
+    local settings = buildDropSettings(dynamic)
+
+    for index = 1, #positions do
+        local coords = positions[index]
+        local adjustedCoords = vector3(coords.x, coords.y, coords.z + (dynamic.groundOffset or 0.0))
+
+        local lootOptions = {
+            forceSpawn = true,
+            spawnChance = dynamic.spawnChance,
+            itemsPerSpot = dynamic.itemsPerSpot,
+            itemsOverride = dynamic.items,
+            overrideConfig = dynamic.overrideConfig
+        }
+
+        local loot, reason = GenerateLoot(zone.lootType or 'house', adjustedCoords, lootOptions)
+
+        if loot and #loot > 0 then
+            local dropItems = {}
+
+            for lootIndex = 1, #loot do
+                local item = loot[lootIndex]
+                dropItems[lootIndex] = { item.name, item.amount, item.metadata or {} }
+            end
+
+            local dropId = exports.ox_inventory:CustomDrop(settings.prefix, dropItems, adjustedCoords, settings.slots,
+                settings.maxWeight, nil, settings.model)
+
+            if dropId then
+                dropIds[#dropIds + 1] = dropId
+                storedPositions[#storedPositions + 1] = adjustedCoords
+            elseif Config.Debug then
+                print(('[World Loot] Falha ao criar drop dinâmico em %s'):format(zoneId))
+            end
+        elseif Config.Debug then
+            print(('[World Loot] Loot vazio para zona %s (motivo: %s)'):format(zoneId, reason or 'empty'))
+        end
+    end
+
+    if #dropIds == 0 then
+        return nil, 'failed_drop'
+    end
+
+    state.dropIds = dropIds
+    state.positions = storedPositions
+    state.nextAvailable = now + (dynamic.respawn or Config.RespawnTime)
+    state.lastSignature = signaturePositions(storedPositions)
+
+    return state
+end
+
 lib.callback.register('qbx-worldloot:server:ensureStaticDrop', function(_, spotId)
     local spot = staticLootSpots[spotId]
 
@@ -312,6 +486,162 @@ lib.callback.register('qbx-worldloot:server:ensureStaticDrop', function(_, spotI
         success = true,
         dropId = dropId,
         coords = spot.coords
+    }
+end)
+
+lib.callback.register('qbx-worldloot:server:spawnZoneDrops', function(source, zoneId, requestedPositions)
+    if type(zoneId) ~= 'string' then
+        return {
+            success = false,
+            reason = 'invalid_zone'
+        }
+    end
+
+    local zone = dynamicZones[zoneId]
+
+    if not zone then
+        return {
+            success = false,
+            reason = 'invalid_zone'
+        }
+    end
+
+    local dynamic = zone.dynamicDrops
+
+    if not dynamic or dynamic.enabled == false then
+        return {
+            success = false,
+            reason = 'disabled'
+        }
+    end
+
+    local state = dynamicZoneState[zoneId]
+
+    if not state then
+        state = {
+            dropIds = {},
+            positions = {},
+            nextAvailable = 0,
+            lastSignature = nil
+        }
+        dynamicZoneState[zoneId] = state
+    end
+
+    cleanupZoneDrops(zoneId)
+
+    if state.dropIds and #state.dropIds > 0 then
+        return {
+            success = true,
+            active = true,
+            dropIds = state.dropIds,
+            positions = state.positions,
+            remaining = state.nextAvailable and math.max(0, state.nextAvailable - GetGameTimer()) or nil
+        }
+    end
+
+    local now = GetGameTimer()
+
+    if state.nextAvailable and now < state.nextAvailable then
+        return {
+            success = false,
+            reason = 'cooldown',
+            remaining = state.nextAvailable - now
+        }
+    end
+
+    if type(requestedPositions) ~= 'table' or #requestedPositions == 0 then
+        return {
+            success = false,
+            reason = 'invalid_payload'
+        }
+    end
+
+    local validatedPositions = {}
+    local maxRadius = (dynamic.randomRadius or zone.radius or 0.0) + 10.0
+
+    for index = 1, #requestedPositions do
+        local pos = requestedPositions[index]
+
+        if type(pos) ~= 'table' or type(pos.x) ~= 'number' or type(pos.y) ~= 'number' or type(pos.z) ~= 'number' then
+            return {
+                success = false,
+                reason = 'invalid_position'
+            }
+        end
+
+        local coords = vector3(pos.x, pos.y, pos.z)
+        local dist = #(coords - zone.coords)
+
+        if dist > maxRadius then
+            return {
+                success = false,
+                reason = 'out_of_bounds'
+            }
+        end
+
+        validatedPositions[#validatedPositions + 1] = coords
+    end
+
+    if #validatedPositions < (dynamic.minDrops or 1) then
+        return {
+            success = false,
+            reason = 'insufficient_positions',
+            required = dynamic.minDrops
+        }
+    end
+
+    local spawnableMax = math.min(#validatedPositions, dynamic.maxDrops or #validatedPositions)
+
+    if spawnableMax < dynamic.minDrops then
+        return {
+            success = false,
+            reason = 'insufficient_positions',
+            required = dynamic.minDrops
+        }
+    end
+
+    local attempts = 0
+    local selection
+    local selectionSignature
+    local lastSignature = state.lastSignature
+
+    repeat
+        shuffleTable(validatedPositions)
+
+        local spawnCount = math.random(dynamic.minDrops or 1, spawnableMax)
+        selection = {}
+
+        for index = 1, spawnCount do
+            selection[index] = validatedPositions[index]
+        end
+
+        selectionSignature = signaturePositions(selection)
+        attempts = attempts + 1
+    until not lastSignature or selectionSignature ~= lastSignature or attempts >= 4 or spawnableMax == dynamic.minDrops
+
+    local result, err, remaining = spawnDynamicZoneDrops(zoneId, selection)
+
+    if not result then
+        if err == 'cooldown' then
+            return {
+                success = false,
+                reason = 'cooldown',
+                remaining = remaining
+            }
+        end
+
+        return {
+            success = false,
+            reason = err or 'failed_drop'
+        }
+    end
+
+    return {
+        success = true,
+        active = true,
+        dropIds = result.dropIds,
+        positions = result.positions,
+        remaining = result.nextAvailable and math.max(0, result.nextAvailable - GetGameTimer()) or nil
     }
 end)
 

@@ -277,11 +277,25 @@ Config.SpecialZones = {
     
     -- Base Militar Fort Zancudo
     {
+        id = 'fort_zancudo',
         name = "Fort Zancudo",
         coords = vector3(-2047.63, 3132.48, 32.81),
         radius = 400.0,
         lootType = 'military',
-        markerColor = {r = 255, g = 0, b = 0}
+        markerColor = {r = 255, g = 0, b = 0},
+        dynamicDrops = {
+            enabled = true,
+            minDrops = 2,
+            maxDrops = 4,
+            respawn = 1200000, -- 20 minutos
+            spawnChance = 100,
+            randomRadius = 300.0,
+            randomAttempts = 10,
+            groundOffset = 0.05,
+            dropSettings = {
+                prefix = 'Zancudo Cache'
+            }
+        }
     },
 
     -- Base militar adicional (Humane Labs)
