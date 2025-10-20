@@ -112,6 +112,57 @@ local function signaturePositions(list)
     return table.concat(keys, '|')
 end
 
+local function sampleGroundZ(x, y, originZ, extraHeight)
+    local probeZ = originZ + (extraHeight or 60.0)
+    local found, groundZ = GetGroundZFor_3dCoord(x, y, probeZ)
+
+    if found then
+        return groundZ
+    end
+
+    return originZ
+end
+
+local function buildRandomPositionsForZone(zone)
+    local dynamic = zone.dynamicDrops
+
+    if not dynamic then
+        return nil, 'no_dynamic_config'
+    end
+
+    local origin = zone.coords or vector3(0.0, 0.0, 0.0)
+    local radius = dynamic.randomRadius or zone.radius or 50.0
+    local attempts = math.max(dynamic.randomAttempts or 6, dynamic.maxDrops or 1)
+    local maxDrops = math.max(dynamic.maxDrops or 1, dynamic.minDrops or 1)
+    local groundOffset = dynamic.groundOffset or 0.0
+
+    local positions = {}
+
+    for _ = 1, attempts do
+        if #positions >= maxDrops then
+            break
+        end
+
+        local angle = math.random() * math.pi * 2.0
+        local distance = radius * math.sqrt(math.random())
+        local x = origin.x + math.cos(angle) * distance
+        local y = origin.y + math.sin(angle) * distance
+
+        local groundZ = sampleGroundZ(x, y, origin.z, 80.0)
+        local coords = vector3(x, y, groundZ + groundOffset)
+
+        if #(coords - origin) <= radius + 0.1 then
+            positions[#positions + 1] = coords
+        end
+    end
+
+    if #positions < (dynamic.minDrops or 1) then
+        return nil, 'insufficient_positions'
+    end
+
+    return positions
+end
+
 local function GenerateLoot(lootType, coords, options)
     options = options or {}
 
@@ -654,6 +705,55 @@ end)
 local function LogInfo(message)
     print('^2[QBX-ZombieLoot] ' .. message .. '^0')
 end
+
+
+local function spawnFortZancudo(reason)
+    local zoneId = 'fort_zancudo'
+    local zone = dynamicZones[zoneId]
+
+    if not zone then
+        LogInfo(('[World Loot] Zona fort_zancudo ausente (%s).'):format(reason or 'trigger'))
+        return false
+    end
+
+    local positions, err = buildRandomPositionsForZone(zone)
+
+    if not positions then
+        LogInfo(('[World Loot] Fort Zancudo sem posicoes validas (%s): %s'):format(reason or 'trigger', err or 'erro'))
+        return false
+    end
+
+    local result, failReason, remaining = spawnDynamicZoneDrops(zoneId, positions)
+
+    if result then
+        LogInfo(('[World Loot] Fort Zancudo gerou drops (%s).'):format(reason or 'trigger'))
+        return true
+    end
+
+    if failReason == 'cooldown' then
+        LogInfo(('[World Loot] Fort Zancudo em cooldown (%d ms restantes) [%s].'):format(remaining or 0, reason or 'trigger'))
+    else
+        LogInfo(('[World Loot] Falha ao gerar drops de Fort Zancudo (%s) [%s].'):format(failReason or 'erro', reason or 'trigger'))
+    end
+
+    return false
+end
+
+
+CreateThread(function()
+    Wait(5000)
+
+    spawnFortZancudo('startup')
+end)
+
+CreateThread(function()
+    local interval = 2 * 60 * 60 * 1000 -- 2 horas
+
+    while true do
+        Wait(interval)
+        spawnFortZancudo('interval')
+    end
+end)
 
 
 RegisterCommand('checkdrop', function(source)
